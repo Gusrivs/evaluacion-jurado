@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Rúbrica de evaluación de proyectos</title>
+<title>Rúbrica de evaluación de proyectos de robótica - Tercer ciclo</title>
 <style>
 :root{--bg:#f3f5f9;--card:#fff;--tx:#18202f;--mut:#566074;--pri:#1f4fd8;--on:#fff;--bd:#cfd6e4;--err:#c62828;--ok:#1b7f4b;--rojo:#d7263d}
 :root[data-theme="dark"]{--bg:#10141c;--card:#1a2030;--tx:#e9edf5;--mut:#9ba6bb;--pri:#6f98ff;--on:#0b1020;--bd:#333d54;--err:#ff8a80;--ok:#5fd09a;--rojo:#ff5a6e}
@@ -48,27 +48,30 @@ section.card{border-left:4px solid var(--rojo)}
 </style>
 </head>
 <body>
-<header class="top"><div class="in"><h1>Rúbrica para la evaluación de proyectos de robótica y desarrollo de software</h1><button type="button" id="tg" class="tg"></button></div></header>
+<header class="top"><div class="in"><h1>Rúbrica para la evaluación de proyectos de robótica · Tercer ciclo</h1><button type="button" id="tg" class="tg"></button></div></header>
 <main>
 <div id="formView">
 <div class="card intro">
-<p>Evalúe de forma objetiva y sistemática la creatividad, el funcionamiento, la presentación, el trabajo en equipo y la aplicación de conocimientos de cada proyecto.</p>
+<p>Evalúe de manera integral los proyectos de robótica elaborados con materiales reciclados: creatividad, uso responsable de recursos, funcionamiento técnico, conocimientos aplicados, trabajo en equipo y conciencia ambiental.</p>
 <ul>
-<li>Seleccione su nombre y el número del proyecto.</li>
+<li>Indique su nombre y elija el número del proyecto. El nombre del proyecto se pregunta al grupo durante la presentación.</li>
 <li>Lea cada criterio y marque el nivel que mejor refleje el trabajo observado.</li>
-<li>Agregue observaciones al final y revise su evaluación antes de enviarla.</li>
+<li>Puede agregar observaciones al final. Revise su evaluación antes de enviarla.</li>
 </ul>
 </div>
 <form id="f" novalidate>
 <div class="card">
 <label class="f" for="ev">Jurado calificador</label>
-<select id="ev"><option value="">Elija su nombre</option></select>
-<label class="f" for="proy">Proyecto evaluado</label>
-<select id="proy"><option value="">Elija el proyecto</option></select>
+<select id="ev" hidden><option value="">Elija su nombre</option></select>
+<input type="text" id="evt" autocomplete="name" placeholder="Escriba su nombre completo" hidden>
+<label class="f" for="proy">Número del proyecto</label>
+<select id="proy"><option value="">Elija el número</option></select>
+<label class="f" for="nom">Nombre del proyecto</label>
+<input type="text" id="nom" autocomplete="off" maxlength="120" placeholder="Pregúntelo al grupo durante la presentación">
 </div>
 <div id="secs"></div>
 <div class="card">
-<label class="f" for="obs">Recomendaciones / observaciones</label>
+<label class="f" for="obs">Recomendaciones / observaciones (opcional)</label>
 <textarea id="obs"></textarea>
 </div>
 <p id="msg" role="alert"></p>
@@ -92,10 +95,13 @@ section.card{border-left:4px solid var(--rojo)}
 
 <script>
 // Pegue aquí la URL de la aplicación web de Apps Script (termina en /exec)
-const ENDPOINT = "https://script.google.com/macros/s/AKfycbzITBAhhJJSGfjNSNjHaRWznhyH_DYmU0z4H3Re2N9kwd9YhFulwgdI11pYTIlbO702cw/exec";
-const EVALUADORES = ["Luis Fernando Chinchilla Alvarez","José David Chinchilla Alvarez","Gustavo Abel Rivas Tejada"];
-// La posición en la lista es el número del proyecto (1 a 16)
-const PROYECTOS = ["Robot Oruga","Aspiradora Reci-Bot","Robo-link","Eco-Traffic-Controller","Smart-Bot","Termómetro del enamoramiento","Sistema de alarma, con sensor PIR y Buzzer","Basurero Inteligente con Arduino","Vallabot","Dispensador de Jabón Automático","Cronos Bell","Elevador to Heaven","Fingerprint Sensor","Dispensador de comida para perros, Woof Feeder","Smart Cane","Smart Vision Glasses"];
+const ENDPOINT = "https://script.google.com/macros/s/AKfycbxwPmP-QUCND40f4dVrqvykV35KbpIOgjOk6i4jW8sgEXN_DRWf0yo4zQHfN5c4jknu/exec";
+// Jurados: si dejas la lista vacía, cada jurado escribe su nombre completo.
+// Si la llenas (["Nombre Apellido", ...]), cada jurado lo elige de una lista.
+const EVALUADORES = ["Gustavo Abel Rivas Tejada", "William Alexander del Cid", "Luis Fernando Chinchilla Alvarez", "José David Chinchilla"];
+// Números de proyecto que se pueden elegir. El nombre lo escribe el jurado en la presentación.
+const ULTIMO_PROYECTO = 28;
+const SIN_PROYECTO = [10]; // números que no existen
 // Puntos por nivel (solo se usan para mostrar el total en pantalla)
 const ESCALA = [["Excelente",5],["Muy Bueno",4],["Bueno",3],["Regular",2],["Deficiente",1]];
 // El orden de los criterios debe coincidir con las columnas F a AH de la hoja
@@ -139,11 +145,16 @@ const $ = id => document.getElementById(id);
 const TOTAL = SECCIONES.reduce((a,s)=>a+s[1].length,0);
 const MAX = TOTAL * Math.max(...ESCALA.map(e=>e[1]));
 const PTS = Object.fromEntries(ESCALA);
-const nombreProy = () => PROYECTOS[$("proy").value - 1];
+const limpiar = t => t.trim().replace(/\s+/g, " ");
+const nombreProy = () => limpiar($("nom").value);
+const evaluador = () => limpiar((EVALUADORES.length ? $("ev") : $("evt")).value);
+const campoEv = () => EVALUADORES.length ? $("ev") : $("evt");
 
 EVALUADORES.forEach(n => $("ev").add(new Option(n,n)));
-PROYECTOS.forEach((n,i) => $("proy").add(new Option(`${i+1} - ${n}`, i+1)));
-try { $("ev").value = localStorage.getItem("ev") || ""; } catch(e){}
+campoEv().hidden = false;
+for (let n = 1; n <= ULTIMO_PROYECTO; n++) if (!SIN_PROYECTO.includes(n)) $("proy").add(new Option(`Proyecto ${n}`, n));
+const recordarEv = () => { try { campoEv().value = localStorage.getItem("ev") || ""; } catch(e){} };
+recordarEv();
 
 let k = 0;
 $("secs").innerHTML = SECCIONES.map(([t,items]) =>
@@ -170,7 +181,7 @@ function actualizar(){
 }
 $("f").addEventListener("change", e => {
   e.target.closest(".crit")?.classList.remove("miss");
-  if (e.target.id==="ev") try { localStorage.setItem("ev", e.target.value); } catch(_){}
+  if (e.target.id==="ev" || e.target.id==="evt") try { localStorage.setItem("ev", limpiar(e.target.value)); } catch(_){}
   actualizar();
 });
 
@@ -183,18 +194,19 @@ $("f").addEventListener("submit", async e => {
   e.preventDefault();
   document.querySelectorAll(".miss").forEach(x=>x.classList.remove("miss"));
   $("msg").textContent = "";
-  if (!$("ev").value) return falla($("ev"),"Elija su nombre en la lista de jurados.");
-  if (!$("proy").value) return falla($("proy"),"Elija el proyecto que está evaluando.");
+  if (!evaluador()) return falla(campoEv(), EVALUADORES.length ? "Elija su nombre en la lista de jurados." : "Escriba su nombre completo.");
+  try { localStorage.setItem("ev", evaluador()); } catch(_){}
+  if (!$("proy").value) return falla($("proy"),"Elija el número del proyecto que está evaluando.");
+  if (!nombreProy()) return falla($("nom"),"Escriba el nombre del proyecto (pregúntelo al grupo).");
   const r = respuestas(), i = r.indexOf(null);
   if (i >= 0) return falla($("c"+i),`Falta calificar un criterio (${r.filter(Boolean).length} de ${TOTAL}).`);
-  if (!$("obs").value.trim()) return falla($("obs"),"Escriba sus recomendaciones u observaciones.");
   const suma = actualizar();
   if (!confirm(`Proyecto ${$("proy").value} - ${nombreProy()}: ${suma} de ${MAX} puntos.\n¿Enviar la evaluación?`)) return;
   if (ENDPOINT.startsWith("PEGUE")) return falla($("send"),"Falta configurar la URL de envío en la página.");
   $("send").disabled = true; $("send").textContent = "Enviando…";
   try {
     const res = await fetch(ENDPOINT,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},
-      body:JSON.stringify({evaluador:$("ev").value,numero:Number($("proy").value),proyecto:nombreProy(),respuestas:r,observaciones:$("obs").value.trim()})});
+      body:JSON.stringify({evaluador:evaluador(),numero:Number($("proy").value),proyecto:nombreProy(),respuestas:r,observaciones:$("obs").value.trim()})});
     const j = await res.json();
     if (!j.ok) throw new Error(j.error);
     $("doneTotal").textContent = `${suma} / ${MAX}`;
@@ -208,7 +220,7 @@ $("f").addEventListener("submit", async e => {
 });
 $("again").onclick = () => {
   $("f").reset();
-  try { $("ev").value = localStorage.getItem("ev") || ""; } catch(e){}
+  recordarEv();
   $("formView").hidden = false; $("bar").hidden = false; $("doneView").hidden = true;
   actualizar(); scrollTo(0,0);
 };
